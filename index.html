@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIACC</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+    }
+
+    #map {
+      position: absolute;
+      top: 56px; /* Altura del navbar */
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 0;
+    }
+
+    .sidebar {
+      position: absolute;
+      top: 56px;
+      left: 0;
+      height: calc(100% - 56px);
+      width: 300px;
+      background-color: #f8f9fa;
+      border-right: 1px solid #ccc;
+      padding: 1rem;
+      overflow-y: auto;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .sidebar.show {
+      transform: translateX(0);
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar fijo -->
+  <nav class="navbar navbar-dark bg-primary fixed-top">
+    <div class="container-fluid">
+      <button id="toggleSidebar" class="btn btn-outline-light btn-sm me-2">☰</button>
+      <a class="navbar-brand" href="#">SIACC</a>
+    </div>
+  </nav>
+
+  <!-- Sidebar superpuesta -->
+  <div id="sidebar" class="sidebar">
+    <h5>Panel lateral</h5>
+    <ul class="nav nav-tabs" id="sidebarTabs" role="tablist">
+      <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab1">Capas</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab2">Marcadores</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab3">Info</button></li>
+    </ul>
+    <div class="tab-content mt-3">
+      <div class="tab-pane fade show active" id="tab1">
+        <p>Gestión de capas del mapa.</p>
+      </div>
+      <div class="tab-pane fade" id="tab2">
+        <p>Lista de marcadores.</p>
+      </div>
+      <div class="tab-pane fade" id="tab3">
+        <p>Información adicional.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mapa -->
+  <div id="map"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+// Inicializar el mapa SIN el control de zoom
+    const map = L.map('map', {
+    center: [19.2866, -99.6557],
+    zoom: 13,
+    zoomControl: false // Desactiva el control por defecto (que va arriba a la izquierda)
+    });
+
+    // Añadir el control de zoom en la esquina inferior derecha
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri'
+    });
+
+    L.control.layers({ 'OpenStreetMap': osm, 'Satélite Esri': esri }).addTo(map);
+
+    L.marker([19.2866, -99.6557]).addTo(map)
+      .bindPopup('¡Hola desde Toluca!').openPopup();
+
+    // Toggle sidebar
+    const toggleBtn = document.getElementById('toggleSidebar');
+    const sidebar = document.getElementById('sidebar');
+
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('show');
+    });
+  </script>
+</body>
+</html>
