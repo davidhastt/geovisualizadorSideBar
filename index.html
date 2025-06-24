@@ -125,7 +125,7 @@
   <nav class="navbar navbar-dark bg-primary fixed-top">
     <div class="container-fluid">
       <button id="toggleSidebar" class="btn btn-outline-light btn-sm me-2">☰</button>
-      <a class="navbar-brand" href="#">SIHCA</a>
+      <a class="navbar-brand" href="#">SIACC</a>
     </div>
   </nav>
 
@@ -144,7 +144,7 @@
 
         <div id="municipiosDIV"></div>
 
-
+        <div id="botonReestablecer"></div>
 
       </div>
       <div class="tab-pane fade" id="tab2">
@@ -192,7 +192,7 @@
 
   <!-- Scripts -->
   <script>
-(function () {
+
   // Inicializar el mapa SIN el control de zoom
     const map = L.map('map', {
     center: [19.2866, -99.6557],
@@ -256,7 +256,11 @@ toggleBtn2.addEventListener('click', () => {
   bottomBar.classList.toggle('show');
 });
 llenaCBXentidades();
-})();
+
+
+
+
+
 
 async function llenaCBXentidades() {
   const url = "http://localhost:4000/spatyal/getNombresEntidades";
@@ -272,6 +276,7 @@ async function llenaCBXentidades() {
       '<select class="form-select" aria-label="Default select example" onchange="llenaCBXmunicipios()" id="entidadesCBX">'+
           '<option selected>Entidades</option>';
       entidadesJSON.forEach(element => {
+
         htmlCode+='<option value="'+element.cve_agee+'">'+element.nomgeo+'</option>';        
 
       });      
@@ -289,7 +294,7 @@ async function llenaCBXentidades() {
 
 async function llenaCBXmunicipios(){
   const cve_agee=document.getElementById("entidadesCBX").value;
-  //console.log(cve_agee);
+
 
   const url = `http://localhost:4000/spatyal/getNombresMunByEnt/${cve_agee}`;
   //console.log(url);
@@ -300,26 +305,29 @@ async function llenaCBXmunicipios(){
       throw new Error(`Response status: ${response.status}`);
       console.log("Error");
     }else{
+
+
       let municipiosJSON = await response.json();
+      
       municipiosJSON=municipiosJSON.Respuesta[0];
       //console.log(municipiosJSON);
       
       htmlCode=
       '<h6>Elije el municipio</h6>'+
-      '<select class="form-select" aria-label="Default select example" id="muncipiosCBX">'+
-          '<option selected>Municipios</option>';
-      
+      '<select class="form-select" aria-label="Default select example" id="muncipiosCBX" onchange="loadMunicipio()">'+
+          '<option selected>Municipios</option>';      
       municipiosJSON.forEach(element => {
         //console.log(element.cve_agee);
-        htmlCode+='<option value="'+element.cve_agee+'">'+element.nomgeo+'</option>';        
-
+        htmlCode+='<option value="'+element.cvegeo+'">'+element.nomgeo+'</option>';        
       });      
-      
       htmlCode+='</select>';
       //console.log(htmlCode);
       document.getElementById("municipiosDIV").innerHTML=htmlCode;
-      
+      loadEntidad(cve_agee);    
     }
+
+
+      
   } catch (error) {
     console.error(error.message);
     
@@ -327,7 +335,97 @@ async function llenaCBXmunicipios(){
 
 }
 
+async function loadMunicipio() {
 
+  const cvegeo=document.getElementById("muncipiosCBX").value;
+  const url = `http://localhost:4000/spatyal/getMunicipioPolygon/${cvegeo}`;
+  //console.log(url);
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+      console.log("Error");
+    }else{
+      //primero borramos lo que tiene el mapa actualmente
+      //borrarContenidoMapa();
+      let municipioJSON = await response.json();
+      //console.log(municipioJSON[0].geojson.features[0]);
+
+      
+      municipioJSON=municipioJSON[0].geojson.features[0];
+      //console.log(entidadJSON.geometry.coordinates[0]);
+      
+      
+      const municipio = L.geoJSON(municipioJSON, {
+        style: {
+          color: 'red',         // Borde
+          fillColor: 'orange',  // Relleno
+          fillOpacity: 0.5,
+          weight: 2
+        }
+      }).addTo(map);
+
+
+      nomgeo=municipioJSON.properties.nomgeo;
+      //console.log(nomgeo);
+
+
+      // Tooltip que aparece al pasar el cursor
+      municipio.bindTooltip(`${nomgeo}`, {
+        sticky: true,         // El tooltip sigue al cursor
+        direction: 'top',     // Posición relativa
+        opacity: 0.9
+      });
+
+      map.fitBounds(municipio.getBounds());
+
+      document.getElementById("botonReestablecer").innerHTML='<br><button type="button" class="btn btn-primary" onclick="borrarContenidoMapa()">Reestablecer</button>';
+
+      
+    }
+  } catch (error) {
+    console.error(error.message);    
+  }  
+}
+
+
+
+
+async function loadEntidad(cve_agee) {
+
+  const url = `http://localhost:4000/spatyal/getEntidadPolygon/${cve_agee}`;
+  //console.log(url);
+  
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+      console.log("Error");
+    }else{
+      //primero borramos lo que tiene el mapa actualmente
+      borrarContenidoMapa();
+      let entidadJSON = await response.json();
+      entidadJSON=entidadJSON[0].geojson.features[0];
+      //console.log(entidadJSON.geometry.coordinates[0]);
+      //console.log(entidadJSON);      
+      const capa = L.geoJSON(entidadJSON).addTo(map);
+      map.fitBounds(capa.getBounds());
+    }
+  } catch (error) {
+    console.error(error.message);    
+  }  
+}
+
+
+function borrarContenidoMapa(){
+      map.eachLayer(function(layer) {
+        // Evita eliminar la capa base (como el mapa de fondo)
+        if (!(layer instanceof L.TileLayer)) {
+          map.removeLayer(layer);
+        }
+      });  
+}
   </script>
 </body>
 </html>
