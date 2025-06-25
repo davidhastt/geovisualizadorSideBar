@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SIACC</title>
+  <title>SIHCA</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -125,7 +125,7 @@
   <nav class="navbar navbar-dark bg-primary fixed-top">
     <div class="container-fluid">
       <button id="toggleSidebar" class="btn btn-outline-light btn-sm me-2">☰</button>
-      <a class="navbar-brand" href="#">SIACC</a>
+      <a class="navbar-brand" href="#">INEGI</a>
     </div>
   </nav>
 
@@ -142,7 +142,7 @@
         <h6>Elije la entidad</h6>
         <div id="entidadesDIV"></div>
 
-        <div id="municipiosDIV"></div>
+        <div id="capitalesDIV"></div>
 
         <div id="botonReestablecer"></div>
 
@@ -256,6 +256,7 @@ toggleBtn2.addEventListener('click', () => {
   bottomBar.classList.toggle('show');
 });
 llenaCBXentidades();
+llenaCBXcapitales();
 
 
 
@@ -273,7 +274,7 @@ async function llenaCBXentidades() {
       const entidadesJSON = await response.json();
       //console.log(entidadesJSON);      
       htmlCode=
-      '<select class="form-select" aria-label="Default select example" onchange="llenaCBXmunicipios()" id="entidadesCBX">'+
+      '<select class="form-select" aria-label="Default select example" onchange="borrarContenidoMapa(); loadCapital(this.value); loadEntidad(this.value);" id="entidadesCBX">'+
           '<option selected>Entidades</option>';
       entidadesJSON.forEach(element => {
 
@@ -292,11 +293,12 @@ async function llenaCBXentidades() {
 }
 
 
-async function llenaCBXmunicipios(){
-  const cve_agee=document.getElementById("entidadesCBX").value;
+
+async function llenaCBXcapitales(){
+  //const cve_agee=document.getElementById("entidadesCBX").value;
 
 
-  const url = `http://localhost:4000/spatyal/getNombresMunByEnt/${cve_agee}`;
+  const url = `http://localhost:4000/spatyal/getCapitales`;
   //console.log(url);
   
   try {
@@ -305,29 +307,22 @@ async function llenaCBXmunicipios(){
       throw new Error(`Response status: ${response.status}`);
       console.log("Error");
     }else{
-
-
-      let municipiosJSON = await response.json();
-      
-      municipiosJSON=municipiosJSON.Respuesta[0];
+      let capitalesJSON = await response.json();
       //console.log(municipiosJSON);
-      
+      //municipiosJSON=municipiosJSON.Respuesta[0];            
       htmlCode=
-      '<h6>Elije el municipio</h6>'+
-      '<select class="form-select" aria-label="Default select example" id="muncipiosCBX" onchange="loadMunicipio()">'+
-          '<option selected>Municipios</option>';      
-      municipiosJSON.forEach(element => {
+      '<h6>Elije la capital</h6>'+
+      '<select class="form-select" aria-label="Default select example" id="capitalesCBX" onchange="borrarContenidoMapa(); loadCapital(this.value); loadEntidad(this.value);">'+
+          '<option selected>Capitales</option>';      
+      capitalesJSON.forEach(element => {
         //console.log(element.cve_agee);
-        htmlCode+='<option value="'+element.cvegeo+'">'+element.nomgeo+'</option>';        
+        htmlCode+='<option value="'+element.cve_agee+'">'+element.capital+'</option>';        
       });      
       htmlCode+='</select>';
       //console.log(htmlCode);
-      document.getElementById("municipiosDIV").innerHTML=htmlCode;
-      loadEntidad(cve_agee);    
+      document.getElementById("capitalesDIV").innerHTML=htmlCode;          
     }
 
-
-      
   } catch (error) {
     console.error(error.message);
     
@@ -335,10 +330,9 @@ async function llenaCBXmunicipios(){
 
 }
 
-async function loadMunicipio() {
 
-  const cvegeo=document.getElementById("muncipiosCBX").value;
-  const url = `http://localhost:4000/spatyal/getMunicipioPolygon/${cvegeo}`;
+async function loadCapital(cve_agee) {
+  const url = `http://localhost:4000/spatyal/getCapital/${cve_agee}`;
   //console.log(url);
   
   try {
@@ -347,53 +341,29 @@ async function loadMunicipio() {
       throw new Error(`Response status: ${response.status}`);
       console.log("Error");
     }else{
-      //primero borramos lo que tiene el mapa actualmente
-      //borrarContenidoMapa();
-      let municipioJSON = await response.json();
-      //console.log(municipioJSON[0].geojson.features[0]);
-
-      
-      municipioJSON=municipioJSON[0].geojson.features[0];
-      //console.log(entidadJSON.geometry.coordinates[0]);
-      
-      
-      const municipio = L.geoJSON(municipioJSON, {
-        style: {
-          color: 'red',         // Borde
-          fillColor: 'orange',  // Relleno
-          fillOpacity: 0.5,
-          weight: 2
-        }
-      }).addTo(map);
-
-
-      nomgeo=municipioJSON.properties.nomgeo;
-      //console.log(nomgeo);
-
-
-      // Tooltip que aparece al pasar el cursor
-      municipio.bindTooltip(`${nomgeo}`, {
-        sticky: true,         // El tooltip sigue al cursor
-        direction: 'top',     // Posición relativa
-        opacity: 0.9
-      });
-
-      map.fitBounds(municipio.getBounds());
-
-      document.getElementById("botonReestablecer").innerHTML='<br><button type="button" class="btn btn-primary" onclick="borrarContenidoMapa()">Reestablecer</button>';
-
-      
+      let capitalesJSON = await response.json();
+      capitalesJSON=capitalesJSON[0].geojson;      
+      // extraemos cordenadas
+      x= capitalesJSON.features[0].geometry.coordinates[0];
+      y= capitalesJSON.features[0].geometry.coordinates[1];
+      //extraemos la capital
+      const capital=capitalesJSON.features[0].properties.capital;
+      //extraemos  el nombre de la entidad
+      const nom_agee=capitalesJSON.features[0].properties.nom_agee;      
+      //console.log(nom_agee);
+      let marker = L.marker([y, x]).addTo(map);
+      marker.bindPopup(`<b>${capital}</b><br>${nom_agee}`).openPopup();
+      //map.flyTo([y, x], 10);      
     }
   } catch (error) {
-    console.error(error.message);    
-  }  
+    console.error(error.message);
+    
+  }
 }
 
 
-
-
 async function loadEntidad(cve_agee) {
-
+  
   const url = `http://localhost:4000/spatyal/getEntidadPolygon/${cve_agee}`;
   //console.log(url);
   
@@ -404,7 +374,7 @@ async function loadEntidad(cve_agee) {
       console.log("Error");
     }else{
       //primero borramos lo que tiene el mapa actualmente
-      borrarContenidoMapa();
+      //borrarContenidoMapa();
       let entidadJSON = await response.json();
       entidadJSON=entidadJSON[0].geojson.features[0];
       //console.log(entidadJSON.geometry.coordinates[0]);
